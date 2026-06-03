@@ -1,0 +1,710 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gas 费与 EIP-1559 探测工具（测试专用）</title>
+    <style>
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial,
+          sans-serif;
+        background-color: #f1f5f9;
+        color: #1e293b;
+        padding: 30px 10px;
+        display: flex;
+        justify-content: center;
+      }
+      .container {
+        background-color: #ffffff;
+        border-radius: 16px;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+        padding: 30px;
+        width: 100%;
+        max-width: 550px;
+      }
+      h2 {
+        margin: 0 0 20px 0;
+        color: #0f172a;
+        font-size: 22px;
+        border-bottom: 2px solid #e2e8f0;
+        padding-bottom: 12px;
+      }
+      .form-group {
+        margin-bottom: 15px;
+      }
+      label {
+        display: block;
+        font-size: 14px;
+        font-weight: 600;
+        margin-bottom: 6px;
+        color: #475569;
+      }
+      input[type="text"] {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        font-size: 14px;
+        box-sizing: border-box;
+        font-family: monospace;
+      }
+      .presets {
+        margin-top: 8px;
+        display: flex;
+        gap: 8px;
+      }
+      .btn-preset {
+        background-color: #e2e8f0;
+        color: #334155;
+        padding: 6px 12px;
+        font-size: 12px;
+        border-radius: 6px;
+        border: none;
+        cursor: pointer;
+      }
+      .btn-preset:hover {
+        background-color: #cbd5e1;
+      }
+
+      /* 状态标签样式 */
+      .status-badge {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: bold;
+        margin-top: 5px;
+      }
+      .supported {
+        background-color: #dcfce7;
+        color: #166534;
+        border: 1px solid #bbf7d0;
+      }
+      .not-supported {
+        background-color: #fee2e2;
+        color: #991b1b;
+        border: 1px solid #fecaca;
+      }
+      .unknown {
+        background-color: #f1f5f9;
+        color: #475569;
+        border: 1px solid #e2e8f0;
+      }
+
+      .fee-box {
+        background-color: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 24px;
+        margin: 20px 0;
+        text-align: center;
+      }
+      .fee-title {
+        font-size: 14px;
+        color: #64748b;
+        margin-bottom: 8px;
+      }
+      .fee-value {
+        font-size: 38px;
+        font-weight: 800;
+        color: #2563eb;
+      }
+      .fee-value.disabled {
+        color: #94a3b8;
+        font-size: 28px;
+      }
+      .unit {
+        font-size: 16px;
+        color: #64748b;
+        font-weight: normal;
+      }
+
+      .detail-item {
+        display: flex;
+        justify-content: space-between;
+        font-size: 14px;
+        margin: 10px 0;
+        border-bottom: 1px dashed #f1f5f9;
+        padding-bottom: 6px;
+      }
+      .detail-item span:last-child {
+        font-family: monospace;
+        font-weight: bold;
+      }
+
+      .btn-main {
+        width: 100%;
+        padding: 12px;
+        background-color: #2563eb;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 15px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s;
+        margin-top: 10px;
+      }
+      .btn-main:hover {
+        background-color: #1d4ed8;
+      }
+
+      .log-status {
+        text-align: center;
+        font-size: 12px;
+        color: #64748b;
+        margin-top: 15px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h2>Gas 费与 EIP-1559 探测组</h2>
+
+      <div class="form-group">
+        <label for="rpc-input">RPC 节点连接地址 (支持动态输入):</label>
+        <input
+          type="text"
+          id="rpc-input"
+          value="https://cloudflare-eth.com"
+          placeholder="请在此输入你要测试的 RPC 节点地址..."
+        />
+        <div class="presets">
+          <button
+            class="btn-preset"
+            onclick="
+              setRPC('https://ethereum-rpc.publicnode.com', '以太坊主网')
+            "
+          >
+            快捷：以太坊主网
+          </button>
+          <button
+            class="btn-preset"
+            onclick="
+              setRPC('https://api.zan.top/bsc-mainnet', 'BSC 币安智能链')
+            "
+          >
+            快捷：BSC 链
+          </button>
+          <button
+            class="btn-preset"
+            onclick="
+              setRPC('https://api.zan.top/bsc-testnet', 'BSC 币安智能测试链')
+            "
+          >
+            快捷：BSC 测试链
+          </button>
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-top: 20px">
+        <label>EIP-1559 协议支持检测：</label>
+        <div id="eip-badge" class="status-badge unknown">未探测</div>
+      </div>
+
+      <div class="fee-box">
+        <div class="fee-title" id="fee-box-title">最新基础费 (Base Fee)</div>
+        <div class="fee-value" id="base-fee-gwei">
+          -- <span class="unit">Gwei</span>
+        </div>
+      </div>
+
+      <div>
+        <div class="detail-item">
+          <span>当前最新区块号 (Block Number):</span>
+          <span id="block-number">--</span>
+        </div>
+        <div class="detail-item">
+          <span>底层返回十六进制 (Hex):</span>
+          <span id="base-fee-hex">--</span>
+        </div>
+        <div class="detail-item">
+          <span>底层返回十进制 (Wei):</span>
+          <span id="base-fee-wei">--</span>
+        </div>
+        <div class="detail-item">
+          <span>eth_maxPriorityFeePerGas (Wei):</span>
+          <span id="eth_maxPriorityFeePerGas">--</span>
+        </div>
+        <div class="detail-item">
+          <span>eth_maxFeePerGas (Wei):</span>
+          <span id="eth_maxFeePerGas">--</span>
+        </div>
+      </div>
+      <div class="response-container">
+        <label>RPC 原始响应数据 (JSON-RPC Response):</label>
+        <pre id="json-response">{}</pre>
+      </div>
+
+      <button class="btn-main" onclick="checkAndFetch()">立即探测并刷新</button>
+      <div class="log-status" id="update-status">等待触发探测...</div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bignumber.js/9.1.2/bignumber.min.js"></script>
+    <script>
+      let timer = null
+
+      function setRPC(url, name) {
+        document.getElementById("rpc-input").value = url
+        document.getElementById("update-status").innerText =
+          `已切换至 ${name}，正在尝试连接...`
+        checkAndFetch()
+      }
+
+      async function checkAndFetch() {
+        const rpcUrl = document.getElementById("rpc-input").value.trim()
+        const badgeEl = document.getElementById("eip-badge")
+        const feeTitleEl = document.getElementById("fee-box-title")
+        const feeValueEl = document.getElementById("base-fee-gwei")
+        const statusEl = document.getElementById("update-status")
+        const responseEl = document.getElementById("json-response")
+
+        if (!rpcUrl) {
+          alert("请输入合法的 RPC 地址！")
+          return
+        }
+
+        try {
+          // 1. 发送批量请求（同时获取最新区块获取 BaseFee，以及调用 eth_maxPriorityFeePerGas 获取建议小费 P_est）
+          const batchResponse = await fetch(rpcUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify([
+              {
+                jsonrpc: "2.0",
+                method: "eth_getBlockByNumber",
+                params: ["latest", false],
+                id: 1,
+              },
+              {
+                jsonrpc: "2.0",
+                method: "eth_maxPriorityFeePerGas",
+                params: [],
+                id: 2,
+              },
+            ]),
+          })
+
+          if (!batchResponse.ok) {
+            throw new Error(`HTTP 错误! 状态码: ${batchResponse.status}`)
+          }
+
+          const batchData = await batchResponse.json()
+
+          // 在黑框中展示批量请求返回的原始 Response 报文数组
+          responseEl.innerText = JSON.stringify(batchData, null, 2)
+
+          const blockResult = batchData.find((d) => d.id === 1)
+          const priorityResult = batchData.find((d) => d.id === 2)
+
+          if (blockResult.error) throw new Error(blockResult.error.message)
+
+          const block = blockResult.result
+          if (!block) throw new Error("未能获取到区块数据")
+
+          const blockNum = parseInt(block.number, 16)
+          document.getElementById("block-number").innerText = blockNum
+
+          // 2. 严谨判断 EIP-1559 支持状态
+          if (
+            block &&
+            "baseFeePerGas" in block &&
+            block.baseFeePerGas !== undefined &&
+            block.baseFeePerGas !== null
+          ) {
+            badgeEl.className = "status-badge supported"
+            badgeEl.innerText = "✅ 真正支持 EIP-1559"
+            feeTitleEl.innerText = "最新基础费 (Base Fee)"
+
+            // 核心参数提取与转换
+            const baseFeeWei = BigInt(block.baseFeePerGas)
+            const baseFeeGwei = Number(baseFeeWei) / 1e9
+
+            // 💥 核心添加：根据需求文档 V2.2 档位预填充算法系数进行计算
+            // const slowP = pEstGwei * 1.0
+            // const slowM = mEstGwei * 1.25
+            // const stdP = pEstGwei * 1.313
+            // const stdM = mEstGwei * 1.95
+            // const fastP = pEstGwei * 1.35
+            // const fastM = mEstGwei * 2.1
+            // 💥 修改点：使用 BigNumber 库进行严谨的链上大数与小数混合运算
+            // 将原始的 Wei 转换为 BigNumber 对象
+            // 获取 P_est (若节点获取失败，兜底给一个基本值 1.5 Gwei)
+
+            // ==================== 💥 修改开始部分 ====================
+            // 1. 将原始的 Wei 转换为 BigNumber 对象
+            const pEstBN = new BigNumber(
+              priorityResult && priorityResult.result
+                ? priorityResult.result
+                : "1500000000",
+            )
+            const baseFeeBN = new BigNumber(block.baseFeePerGas)
+
+            // 通用标准公式推导 M_est = (BaseFee * 2) + P_est
+            const mEstBN = baseFeeBN.multipliedBy(2).plus(pEstBN)
+
+            // 定义标准转账的 Gas Limit (21000 * 1.1 = 23100)
+            const GAS_LIMIT = new BigNumber(21000 * 1.1)
+            const ONE_GWEI = new BigNumber(1000000000)
+
+            // 🌍 动态判断链类型并匹配汇率 (根据当前 rpcUrl 是否包含 testnet 关键字)
+            let bnbPrice
+            let chainNameLabel
+            if (rpcUrl.toLowerCase().includes("testnet")) {
+              bnbPrice = new BigNumber("13.73061549")
+              chainNameLabel = "测试链"
+            } else {
+              bnbPrice = new BigNumber("652.10782487")
+              chainNameLabel = "正式链"
+            }
+
+            // --- 🟢 较慢档位计算 ---
+            const slowP_BN = pEstBN.multipliedBy(1.0)
+            const slowM_BN = mEstBN.multipliedBy(1.25)
+            const slowP = slowP_BN.dividedBy(ONE_GWEI).toString()
+            const slowM = slowM_BN.dividedBy(ONE_GWEI).toString()
+            // 计算代币总额 (Wei -> BNB)，并直接输出最原始科学计数或长字符串结果
+            const slowMaxCost = slowM_BN
+              .multipliedBy(GAS_LIMIT)
+              .dividedBy(1e18)
+              .toString()
+            const slowEstCost = baseFeeBN
+              .plus(slowP_BN)
+              .multipliedBy(GAS_LIMIT)
+              .dividedBy(1e18)
+              .toString()
+            // 计算美元价值 (代币总额 * 汇率)
+            const slowMaxUSD = slowM_BN
+              .multipliedBy(GAS_LIMIT)
+              .dividedBy(1e18)
+              .multipliedBy(bnbPrice)
+              .toString()
+            const slowEstUSD = baseFeeBN
+              .plus(slowP_BN)
+              .multipliedBy(GAS_LIMIT)
+              .dividedBy(1e18)
+              .multipliedBy(bnbPrice)
+              .toString()
+
+            // --- 🔵 标准档位计算 ---
+            const stdP_BN = pEstBN.multipliedBy(1.313)
+            const stdM_BN = mEstBN.multipliedBy(1.95)
+            const stdP = stdP_BN.dividedBy(ONE_GWEI).toString()
+            const stdM = stdM_BN.dividedBy(ONE_GWEI).toString()
+            // 计算代币总额
+            const stdMaxCost = stdM_BN
+              .multipliedBy(GAS_LIMIT)
+              .dividedBy(1e18)
+              .toString()
+            const stdEstCost = baseFeeBN
+              .plus(stdP_BN)
+              .multipliedBy(GAS_LIMIT)
+              .dividedBy(1e18)
+              .toString()
+            // 计算美元价值
+            const stdMaxUSD = stdM_BN
+              .multipliedBy(GAS_LIMIT)
+              .dividedBy(1e18)
+              .multipliedBy(bnbPrice)
+              .toString()
+            const stdEstUSD = baseFeeBN
+              .plus(stdP_BN)
+              .multipliedBy(GAS_LIMIT)
+              .dividedBy(1e18)
+              .multipliedBy(bnbPrice)
+              .toString()
+
+            // --- 🟠 稍快档位计算 ---
+            const fastP_BN = pEstBN.multipliedBy(1.35)
+            const fastM_BN = mEstBN.multipliedBy(2.1)
+            const fastP = fastP_BN.dividedBy(ONE_GWEI).toString()
+            const fastM = fastM_BN.dividedBy(ONE_GWEI).toString()
+            // 计算代币总额
+            const fastMaxCost = fastM_BN
+              .multipliedBy(GAS_LIMIT)
+              .dividedBy(1e18)
+              .toString()
+            const fastEstCost = baseFeeBN
+              .plus(fastP_BN)
+              .multipliedBy(GAS_LIMIT)
+              .dividedBy(1e18)
+              .toString()
+            // 计算美元价值
+            const fastMaxUSD = fastM_BN
+              .multipliedBy(GAS_LIMIT)
+              .dividedBy(1e18)
+              .multipliedBy(bnbPrice)
+              .toString()
+            const fastEstUSD = baseFeeBN
+              .plus(fastP_BN)
+              .multipliedBy(GAS_LIMIT)
+              .dividedBy(1e18)
+              .multipliedBy(bnbPrice)
+              .toString()
+
+            // 渲染主面板的 Base Fee (同样使用 BigNumber 无损精度展示)
+            feeValueEl.innerHTML = `${baseFeeBN.dividedBy(ONE_GWEI).toString()} <span class="unit">Gwei</span>`
+            document.getElementById("base-fee-hex").innerText =
+              block.baseFeePerGas
+            document.getElementById("base-fee-wei").innerText =
+              baseFeeBN.toString()
+            document.getElementById("eth_maxPriorityFeePerGas").innerText =
+              pEstBN.toString()
+            document.getElementById("eth_maxFeePerGas").innerText =
+              mEstBN.toString()
+            // 重新拼接渲染面板，输出未经过任何舍入截断的底层最原始数据结果
+            const extraHtml = `
+                <div style="margin: 15px 0; padding: 12px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; text-align: left; font-size: 13px; line-height: 1.6;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-bottom: 2px solid #bbf7d0; padding-bottom: 4px;">
+                        <strong style="color: #166534;">📋 需求文档算法预填对照组 (Gas Limit: ${GAS_LIMIT.toString()})</strong>
+                        <span style="background: #bbf7d0; color: #166534; font-size: 11px; padding: 2px 6px; border-radius: 4px; font-weight: bold;">当前汇率模式: ${chainNameLabel} ($${bnbPrice.toString()})</span>
+                    </div>
+                    
+                    <div style="margin-bottom: 10px; border-bottom: 1px dashed #bbf7d0; padding-bottom: 6px;">
+                        <span style="color: #22c55e;">🟢 <strong>较慢档位：</strong></span><br>
+                        • 预填费率: Max Priority: ${slowP} | Max Fee: ${slowM} Gwei<br>
+                        • 💰 <span style="color: #b45309;">最高费用 (上限):</span> <b>${slowMaxCost}</b> BNB <span style="color: #64748b;">($${slowMaxUSD})</span><br>
+                        • 💰 <span style="color: #15803d;">预估费用 (实际):</span> <b>${slowEstCost}</b> BNB <span style="color: #64748b;">($${slowEstUSD})</span>
+                    </div>
+                    
+                    <div style="margin-bottom: 10px; border-bottom: 1px dashed #bbf7d0; padding-bottom: 6px;">
+                        <span style="color: #3b82f6;">🔵 <strong>标准档位（默认）：</strong></span><br>
+                        • 预填费率: Max Priority: ${stdP} | Max Fee: ${stdM} Gwei<br>
+                        • 💰 <span style="color: #b45309;">最高费用 (上限):</span> <b>${stdMaxCost}</b> BNB <span style="color: #64748b;">($${stdMaxUSD})</span><br>
+                        • 💰 <span style="color: #15803d;">预估费用 (实际):</span> <b>${stdEstCost}</b> BNB <span style="color: #64748b;">($${stdEstUSD})</span>
+                    </div>
+                    
+                    <div>
+                        <span style="color: #f97316;">🟠 <strong>稍快档位：</strong></span><br>
+                        • 预填费率: Max Priority: ${fastP} | Max Fee: ${fastM} Gwei<br>
+                        • 💰 <span style="color: #b45309;">最高费用 (上限):</span> <b>${fastMaxCost}</b> BNB <span style="color: #64748b;">($${fastMaxUSD})</span><br>
+                        • 💰 <span style="color: #15803d;">预估费用 (实际):</span> <b>${fastEstCost}</b> BNB <span style="color: #64748b;">($${fastEstUSD})</span>
+                    </div>
+                </div>
+            `
+            // ==================== 💥 修改结束部分 ====================
+
+            // 防止重复插入，先移除旧的对照组面板
+            const oldPanel = document.getElementById("test-preset-panel")
+            if (oldPanel) oldPanel.remove()
+
+            // 插入新面板
+            const panelContainer = document.createElement("div")
+            panelContainer.id = "test-preset-panel"
+            panelContainer.innerHTML = extraHtml
+            feeValueEl.parentElement.appendChild(panelContainer)
+          } else {
+            // Legacy 传统链处理
+            badgeEl.className = "status-badge not-supported"
+            badgeEl.innerText = "❌ 真正不支持 EIP-1559 (Legacy 传统链)"
+            feeTitleEl.innerText = "最新基础费 (Base Fee)"
+
+            feeValueEl.innerHTML = `<span class="disabled">无 Base Fee 字段</span>`
+            document.getElementById("base-fee-hex").innerText =
+              "null (原始报文中无该字段)"
+            document.getElementById("base-fee-wei").innerText =
+              "该链没有 baseFeePerGas 属性"
+
+            const oldPanel = document.getElementById("test-preset-panel")
+            if (oldPanel) oldPanel.remove()
+          }
+
+          const now = new Date()
+          statusEl.innerText = `探测成功! 最后更新时间: ${now.toTimeString().split(" ")[0]}`
+        } catch (error) {
+          console.error(error)
+          badgeEl.className = "status-badge unknown"
+          badgeEl.innerText = "连接失败 / 异常"
+          feeValueEl.innerHTML = `<span class="disabled">无法获取数据</span>`
+          statusEl.innerText = `错误原因: ${error.message}`
+          const oldPanel = document.getElementById("test-preset-panel")
+          if (oldPanel) oldPanel.remove()
+        }
+      }
+
+      // 初始化加载
+      checkAndFetch()
+
+      // 默认开启 15 秒自动轮询
+      if (timer) clearInterval(timer)
+      timer = setInterval(checkAndFetch, 15000)
+    </script>
+  </body>
+</html>
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gas 费与 EIP-1559 探测工具（含 Response 报文）</title>
+    <style>
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial,
+          sans-serif;
+        background-color: #f1f5f9;
+        color: #1e293b;
+        padding: 30px 10px;
+        display: flex;
+        justify-content: center;
+      }
+      .container {
+        background-color: #ffffff;
+        border-radius: 16px;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+        padding: 30px;
+        width: 100%;
+        max-width: 600px;
+      }
+      h2 {
+        margin: 0 0 20px 0;
+        color: #0f172a;
+        font-size: 22px;
+        border-bottom: 2px solid #e2e8f0;
+        padding-bottom: 12px;
+      }
+      .form-group {
+        margin-bottom: 15px;
+      }
+      label {
+        display: block;
+        font-size: 14px;
+        font-weight: 600;
+        margin-bottom: 6px;
+        color: #475569;
+      }
+      input[type="text"] {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        font-size: 14px;
+        box-sizing: border-box;
+        font-family: monospace;
+      }
+      .presets {
+        margin-top: 8px;
+        display: flex;
+        gap: 8px;
+      }
+      .btn-preset {
+        background-color: #e2e8f0;
+        color: #334155;
+        padding: 6px 12px;
+        font-size: 12px;
+        border-radius: 6px;
+        border: none;
+        cursor: pointer;
+      }
+      .btn-preset:hover {
+        background-color: #cbd5e1;
+      }
+
+      .status-badge {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: bold;
+        margin-top: 5px;
+      }
+      .supported {
+        background-color: #dcfce7;
+        color: #166534;
+        border: 1px solid #bbf7d0;
+      }
+      .not-supported {
+        background-color: #fee2e2;
+        color: #991b1b;
+        border: 1px solid #fecaca;
+      }
+      .unknown {
+        background-color: #f1f5f9;
+        color: #475569;
+        border: 1px solid #e2e8f0;
+      }
+
+      .fee-box {
+        background-color: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 20px;
+        margin: 20px 0;
+        text-align: center;
+      }
+      .fee-title {
+        font-size: 14px;
+        color: #64748b;
+        margin-bottom: 8px;
+      }
+      .fee-value {
+        font-size: 34px;
+        font-weight: 800;
+        color: #2563eb;
+      }
+      .fee-value.disabled {
+        color: #94a3b8;
+        font-size: 24px;
+      }
+      .unit {
+        font-size: 16px;
+        color: #64748b;
+        font-weight: normal;
+      }
+
+      .detail-item {
+        display: flex;
+        justify-content: space-between;
+        font-size: 14px;
+        margin: 8px 0;
+        border-bottom: 1px dashed #f1f5f9;
+        padding-bottom: 4px;
+      }
+      .detail-item span:last-child {
+        font-family: monospace;
+        font-weight: bold;
+      }
+
+      /* Response 显示区域样式 */
+      .response-container {
+        margin-top: 20px;
+      }
+      pre {
+        background-color: #0f172a;
+        color: #38bdf8;
+        padding: 15px;
+        border-radius: 8px;
+        font-size: 12px;
+        overflow-x: auto;
+        max-height: 250px;
+        margin-top: 6px;
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+      }
+
+      .btn-main {
+        width: 100%;
+        padding: 12px;
+        background-color: #2563eb;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 15px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s;
+        margin-top: 10px;
+      }
+      .btn-main:hover {
+        background-color: #1d4ed8;
+      }
+
+      .log-status {
+        text-align: center;
+        font-size: 12px;
+        color: #64748b;
+        margin-top: 10px;
+      }
+    </style>
+  </head>
+  <body></body>
+</html>
