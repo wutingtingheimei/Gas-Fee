@@ -1,0 +1,725 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MetaKey Gas 费测试沙盒 (完美多级兜底保障版)</title>
+    <style>
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial,
+          sans-serif;
+        background-color: #f1f5f9;
+        color: #0f172a;
+        padding: 20px 10px;
+        display: flex;
+        justify-content: center;
+      }
+      .container {
+        background-color: #ffffff;
+        border-radius: 16px;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+        border: 1px solid #e2e8f0;
+        padding: 25px;
+        width: 100%;
+        max-width: 650px;
+      }
+      h2 {
+        margin: 0 0 15px 0;
+        color: #1e3a8a;
+        font-size: 20px;
+        border-bottom: 2px solid #3b82f6;
+        padding-bottom: 8px;
+      }
+      .section-title {
+        font-size: 14px;
+        font-weight: 700;
+        color: #475569;
+        margin: 15px 0 8px 0;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      .form-group {
+        margin-bottom: 12px;
+      }
+      label {
+        display: block;
+        font-size: 13px;
+        font-weight: 600;
+        margin-bottom: 4px;
+        color: #334155;
+      }
+      input[type="text"],
+      select {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        font-size: 13px;
+        box-sizing: border-box;
+        font-family: monospace;
+      }
+      .grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+      .presets {
+        margin-top: 6px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      .btn-preset {
+        background-color: #f1f5f9;
+        color: #475569;
+        padding: 4px 10px;
+        font-size: 11px;
+        border-radius: 4px;
+        border: 1px solid #e2e8f0;
+        cursor: pointer;
+      }
+      .btn-preset:hover {
+        background-color: #e2e8f0;
+      }
+      .status-badge {
+        display: inline-block;
+        padding: 5px 12px;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: bold;
+        margin-top: 2px;
+        width: 100%;
+        box-sizing: border-box;
+        text-align: center;
+      }
+      .supported {
+        background-color: #ecfdf5;
+        color: #065f46;
+        border: 1px solid #a7f3d0;
+      }
+      .not-supported {
+        background-color: #fef2f2;
+        color: #991b1b;
+        border: 1px solid #fecaca;
+      }
+      .unknown {
+        background-color: #f8fafc;
+        color: #64748b;
+        border: 1px solid #e2e8f0;
+      }
+
+      .fee-box {
+        background-color: #eff6ff;
+        border: 1px solid #bfdbfe;
+        border-radius: 8px;
+        padding: 15px;
+        margin: 15px 0;
+        text-align: center;
+      }
+      .fee-title {
+        font-size: 13px;
+        color: #1e40af;
+        font-weight: 600;
+        margin-bottom: 4px;
+      }
+      .fee-value {
+        font-size: 24px;
+        font-weight: 800;
+        color: #1d4ed8;
+        word-break: break-all;
+      }
+      .unit {
+        font-size: 14px;
+        color: #1e40af;
+        font-weight: normal;
+      }
+
+      .detail-item {
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+        margin: 6px 0;
+        border-bottom: 1px dashed #f1f5f9;
+        padding-bottom: 2px;
+      }
+      .detail-item span:last-child {
+        font-family: monospace;
+        font-weight: bold;
+        color: #0f172a;
+        word-break: break-all;
+        text-align: right;
+        padding-left: 10px;
+      }
+
+      pre {
+        background-color: #1e1e2e;
+        color: #cdd6f4;
+        padding: 10px;
+        border-radius: 6px;
+        font-size: 11px;
+        overflow-x: auto;
+        max-height: 120px;
+        margin: 4px 0 0 0;
+      }
+      .btn-main {
+        width: 100%;
+        padding: 10px;
+        background-color: #2563eb;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        margin-top: 10px;
+      }
+      .btn-main:hover {
+        background-color: #1d4ed8;
+      }
+      .log-status {
+        text-align: center;
+        font-size: 11px;
+        color: #64748b;
+        margin-top: 10px;
+      }
+      .dapp-box {
+        background-color: #fffbeb;
+        border: 1px solid #fde68a;
+        border-radius: 8px;
+        padding: 12px;
+        margin-top: 10px;
+      }
+      b,
+      span {
+        word-break: break-all;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h2>MetaKey Gas 费测试沙盒 (完美多级兜底保障版)</h2>
+
+      <div class="form-group">
+        <label for="rpc-input">RPC 节点连接地址:</label>
+        <input type="text" id="rpc-input" value="https://rpc.eth.gateway.fm" />
+        <div class="presets">
+          <button
+            class="btn-preset"
+            onclick="setRPC('https://rpc.eth.gateway.fm', '以太坊主网')"
+          >
+            以太坊主网
+          </button>
+          <button
+            class="btn-preset"
+            onclick="
+              setRPC('https://bsc-dataseed4.defibit.io', 'BSC 币安智能链')
+            "
+          >
+            BSC 链 (BaseFee=0)
+          </button>
+          <button
+            class="btn-preset"
+            onclick="
+              setRPC(
+                'https://bnb-testnet.api.onfinality.io/public',
+                'BSC 测试链',
+              )
+            "
+          >
+            BSC 测试链
+          </button>
+          <button
+            class="btn-preset"
+            onclick="setRPC('https://polygon-rpc.com', 'Polygon 链')"
+          >
+            Polygon 链
+          </button>
+        </div>
+      </div>
+
+      <div class="dapp-box">
+        <div class="section-title" style="margin-top: 0; color: #b45309">
+          ⚙️ DApp 传入参数模拟 (留空代表不传/使用钱包默认值)
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label>type 字段:</label>
+            <select id="dapp-type">
+              <option value="">未传值 (undefined)</option>
+              <option value="0">0 (Legacy)</option>
+              <option value="2">2 (EIP-1559)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>gasLimit (Gas 限制):</label>
+            <input
+              type="text"
+              id="dapp-gas-limit"
+              placeholder="不传默认按 21000 测算"
+            />
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label>gasPrice (Gwei - 仅用于传统模式):</label>
+            <input type="text" id="dapp-gas-price" placeholder="例如: 30" />
+          </div>
+          <div class="form-group">
+            <label>maxFeePerGas (Gwei - 用于1559):</label>
+            <input type="text" id="dapp-max-fee" placeholder="例如: 45" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>maxPriorityFeePerGas (小费 Gwei - 用于1559):</label>
+          <input type="text" id="dapp-priority-fee" placeholder="例如: 1.5" />
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-top: 15px">
+        <label>钱包核心逻辑最终识别决断：</label>
+        <div id="eip-badge" class="status-badge unknown">未探测</div>
+      </div>
+
+      <div class="fee-box">
+        <div class="fee-title" id="fee-box-title">网络基准费用</div>
+        <div class="fee-value" id="base-fee-gwei">
+          -- <span class="unit">Gwei</span>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-title">底层节点环境与决断底数数据</div>
+        <div class="detail-item">
+          <span>最新区块号 (Block Number):</span
+          ><span id="block-number">--</span>
+        </div>
+        <div class="detail-item">
+          <span>区块头返回 Base Fee (Wei):</span
+          ><span id="base-fee-wei">--</span>
+        </div>
+        <div class="detail-item">
+          <span>锁定后的基准 Max Priority Fee (Wei):</span
+          ><span id="rpc-max-priority">--</span>
+        </div>
+        <div class="detail-item" style="background: #faf5ff; padding: 4px 0">
+          <span>🎯 最终决断的基准 Max Fee 底数 (Wei):</span
+          ><span id="final-base-maxfee" style="color: #7c3aed">--</span>
+        </div>
+      </div>
+
+      <div class="section-title" style="color: #2563eb">
+        MetaKey 预设滑块档位与多级兜底联动计算面板
+      </div>
+      <div id="test-preset-panel"></div>
+
+      <div class="grid-2" style="margin-top: 10px">
+        <div>
+          <label>getFeeData() 响应:</label>
+          <pre id="ethers-response">{}</pre>
+        </div>
+        <div>
+          <label>区块 BaseFee 侦测:</label>
+          <pre id="json-response">{}</pre>
+        </div>
+      </div>
+
+      <button class="btn-main" onclick="checkAndFetch()">
+        立即执行探测与逻辑核对
+      </button>
+      <div class="log-status" id="update-status">等待触发探测...</div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bignumber.js/9.1.2/bignumber.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.9.1/ethers.umd.min.js"></script>
+
+    <script>
+      let timer = null
+      const ONE_GWEI = new BigNumber("1000000000")
+      const TWENTY_GWEI = new BigNumber("20000000000") // 20Gwei 强制最低兜底
+
+      function setRPC(url, name) {
+        document.getElementById("rpc-input").value = url
+        document.getElementById("update-status").innerText = `切换至 ${name}...`
+        checkAndFetch()
+      }
+
+      async function checkAndFetch() {
+        const rpcUrl = document.getElementById("rpc-input").value.trim()
+        const badgeEl = document.getElementById("eip-badge")
+        const feeTitleEl = document.getElementById("fee-box-title")
+        const feeValueEl = document.getElementById("base-fee-gwei")
+        const statusEl = document.getElementById("update-status")
+
+        if (!rpcUrl) {
+          alert("请输入有效的 RPC 地址！")
+          return
+        }
+
+        // 确定最终参与计算的 Gas Limit
+        const dGasLimitStr = document
+          .getElementById("dapp-gas-limit")
+          .value.trim()
+        let finalGasLimitBN = new BigNumber("21000")
+        let gasLimitSource = "钱包默认 (21000)"
+        if (dGasLimitStr !== "" && !isNaN(dGasLimitStr)) {
+          finalGasLimitBN = new BigNumber(dGasLimitStr)
+          gasLimitSource = `DApp 传入 (${dGasLimitStr})`
+        }
+
+        // 解析获取 DApp 模拟器输入数据
+        const dType = document.getElementById("dapp-type").value
+        const dGasPriceStr = document
+          .getElementById("dapp-gas-price")
+          .value.trim()
+        const dMaxFeeStr = document.getElementById("dapp-max-fee").value.trim()
+        const dPriorityStr = document
+          .getElementById("dapp-priority-fee")
+          .value.trim()
+
+        const dappHasGasPrice = dGasPriceStr !== ""
+        const dappGasPriceBN = dappHasGasPrice
+          ? new BigNumber(dGasPriceStr).multipliedBy(ONE_GWEI)
+          : null
+        const dappHasMaxFee = dMaxFeeStr !== ""
+        const dappMaxFeeBN = dappHasMaxFee
+          ? new BigNumber(dMaxFeeStr).multipliedBy(ONE_GWEI)
+          : null
+        const dappHasPriority = dPriorityStr !== ""
+        const dappPriorityBN = dappHasPriority
+          ? new BigNumber(dPriorityStr).multipliedBy(ONE_GWEI)
+          : null
+
+        try {
+          // 1. 底层 RPC 批量获取环境数据
+          const batchResponse = await fetch(rpcUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify([
+              {
+                jsonrpc: "2.0",
+                method: "eth_getBlockByNumber",
+                params: ["latest", false],
+                id: 1,
+              },
+              {
+                jsonrpc: "2.0",
+                method: "eth_maxPriorityFeePerGas",
+                params: [],
+                id: 2,
+              },
+            ]),
+          })
+          const batchData = await batchResponse.json()
+          const blockRes = batchData.find((d) => d.id === 1)?.result
+          const priorityRes = batchData.find((d) => d.id === 2)?.result
+
+          document.getElementById("json-response").innerText = JSON.stringify(
+            {
+              baseFeePerGas: blockRes ? blockRes.baseFeePerGas : "未返回",
+              eth_maxPriorityFeePerGas: priorityRes || "未返回",
+            },
+            null,
+            2,
+          )
+
+          if (!blockRes) throw new Error("无法读取区块头数据")
+          document.getElementById("block-number").innerText = parseInt(
+            blockRes.number,
+            16,
+          )
+
+          const chainSupports1559 =
+            "baseFeePerGas" in blockRes &&
+            blockRes.baseFeePerGas !== null &&
+            blockRes.baseFeePerGas !== undefined
+
+          // 2. 借助 Ethers 获取官方建议参数
+          const provider = new ethers.JsonRpcProvider(rpcUrl)
+          const feeData = await provider.getFeeData()
+          const ethersLog = {
+            gasPrice: feeData.gasPrice ? feeData.gasPrice.toString() : "null",
+            lastBaseFeePerGas: feeData.lastBaseFeePerGas
+              ? feeData.lastBaseFeePerGas.toString()
+              : "null",
+            maxFeePerGas: feeData.maxFeePerGas
+              ? feeData.maxFeePerGas.toString()
+              : "null",
+            maxPriorityFeePerGas: feeData.maxPriorityFeePerGas
+              ? feeData.maxPriorityFeePerGas.toString()
+              : "null",
+          }
+          document.getElementById("ethers-response").innerText = JSON.stringify(
+            ethersLog,
+            null,
+            2,
+          )
+
+          // 3. 【核心决断器判定模式】
+          let finalMode = "LEGACY"
+          let decisionReason = ""
+
+          if (dType === "0") {
+            finalMode = "LEGACY"
+            decisionReason = "DApp 显式传入 type = 0"
+          } else if (dappHasGasPrice) {
+            finalMode = "LEGACY"
+            decisionReason = "DApp 传入了 gasPrice 字段"
+          } else if (dType === "2" || dappHasMaxFee || dappHasPriority) {
+            if (chainSupports1559) {
+              finalMode = "EIP1559"
+              decisionReason = "DApp 传入 1559 相关字段且链节点支持"
+            } else {
+              finalMode = "LEGACY"
+              decisionReason = "DApp 意图走 1559，但链节点不支持，自动降级"
+            }
+          } else {
+            if (chainSupports1559) {
+              finalMode = "EIP1559"
+              decisionReason = "DApp 未传参，当前链原生支持 EIP-1559"
+            } else {
+              finalMode = "LEGACY"
+              decisionReason = "DApp 未传参，当前链为传统旧链"
+            }
+          }
+
+          // 4. 执行对应的计算组分支
+          if (finalMode === "EIP1559") {
+            badgeEl.className = "status-badge supported"
+            badgeEl.innerText = `🟢 EIP-1559 模式 (${decisionReason})`
+            feeTitleEl.innerText = "网络实时 Base Fee"
+
+            let baseFeeBN = new BigNumber(blockRes.baseFeePerGas)
+            document.getElementById("base-fee-wei").innerText =
+              baseFeeBN.toString()
+            feeValueEl.innerHTML = `${baseFeeBN.dividedBy(ONE_GWEI).toString()} <span class="unit">Gwei</span>`
+
+            // 💥 【优化 1】：maxPriorityFeePerGas 兜底机制 (eth_maxPriorityFeePerGas > 1GWEI)
+            let rpcPriorityBN
+            if (priorityRes) {
+              rpcPriorityBN = new BigNumber(priorityRes)
+            } else if (feeData.maxPriorityFeePerGas) {
+              rpcPriorityBN = new BigNumber(
+                feeData.maxPriorityFeePerGas.toString(),
+              )
+            } else {
+              rpcPriorityBN = new BigNumber("1500000000") // 1.5 Gwei 基础初始
+            }
+
+            document.getElementById("rpc-max-priority").innerText =
+              rpcPriorityBN.toString()
+
+            // 💥 【优化 2】：maxFeePerGas 核心链条梯度兜底：dapp传值 > feeData.maxFeePerGas > feeData.gasPrice > 20Gwei
+            let initialMaxFeeBN
+            if (dappHasMaxFee) {
+              initialMaxFeeBN = dappMaxFeeBN
+            } else if (feeData.maxFeePerGas) {
+              initialMaxFeeBN = new BigNumber(feeData.maxFeePerGas.toString())
+            } else if (feeData.gasPrice) {
+              initialMaxFeeBN = new BigNumber(feeData.gasPrice.toString())
+            } else {
+              initialMaxFeeBN = TWENTY_GWEI
+            }
+            document.getElementById("final-base-maxfee").innerText =
+              initialMaxFeeBN.toString()
+
+            // 计算多档位数据方法
+            function get1559DoseData() {
+              let slowMax, stdMax, fastMax
+              let slowPriority, stdPriority, fastPriority
+
+              // 根据梯度底数 initialMaxFeeBN 进行比例缩放
+              if (dappHasMaxFee) {
+                stdMax = initialMaxFeeBN // 传入值作为标准档
+                slowMax = initialMaxFeeBN.dividedBy(1.95).multipliedBy(1.25)
+                fastMax = initialMaxFeeBN.dividedBy(1.95).multipliedBy(2.1)
+              } else {
+                slowMax = initialMaxFeeBN.multipliedBy(1.25)
+                stdMax = initialMaxFeeBN.multipliedBy(1.95)
+                fastMax = initialMaxFeeBN.multipliedBy(2.1)
+              }
+
+              // 小费比例缩放
+              if (dappHasPriority) {
+                stdPriority = dappPriorityBN
+                slowPriority = dappPriorityBN.dividedBy(1.313).multipliedBy(1.0)
+                fastPriority = dappPriorityBN
+                  .dividedBy(1.313)
+                  .multipliedBy(1.35)
+              } else {
+                slowPriority = rpcPriorityBN.multipliedBy(1.0)
+                stdPriority = rpcPriorityBN.multipliedBy(1.313)
+                fastPriority = rpcPriorityBN.multipliedBy(1.35)
+              }
+
+              // 构建单档位费率渲染并施加最后的 MaxFee 安全锁定限制
+              const buildResult = (mFeeBN, pFeeBN) => {
+                // 💥 【优化 3】：在缩放后的档位最终结果做取值比较锁定：Max Fee = max(m, p + base)
+                const absoluteFloorBN = baseFeeBN.plus(pFeeBN)
+                const lockedMaxFeeBN = BigNumber.maximum(
+                  mFeeBN,
+                  absoluteFloorBN,
+                )
+
+                // 预估实际结算费率单价公式：min(Base Fee + Priority Fee, Max Fee)
+                const basePlusPriority = baseFeeBN.plus(pFeeBN)
+                const estFeePriceBN = BigNumber.minimum(
+                  basePlusPriority,
+                  lockedMaxFeeBN,
+                )
+
+                const estCost = estFeePriceBN
+                  .multipliedBy(finalGasLimitBN)
+                  .dividedBy("1000000000000000000")
+                const maxCost = lockedMaxFeeBN
+                  .multipliedBy(finalGasLimitBN)
+                  .dividedBy("1000000000000000000")
+
+                return {
+                  mGwei: lockedMaxFeeBN.dividedBy(ONE_GWEI).toString(),
+                  pGwei: pFeeBN.dividedBy(ONE_GWEI).toString(),
+                  estCost: estCost.toFixed(),
+                  maxCost: maxCost.toFixed(),
+                }
+              }
+
+              return {
+                slow: buildResult(slowMax, slowPriority),
+                std: buildResult(stdMax, stdPriority),
+                fast: buildResult(fastMax, fastPriority),
+              }
+            }
+
+            const eipRes = get1559DoseData()
+            render1559Panel(
+              eipRes.slow,
+              eipRes.std,
+              eipRes.fast,
+              gasLimitSource,
+            )
+          } else {
+            // ==========================================
+            // 🔴 Legacy 传统模式
+            // ==========================================
+            badgeEl.className = "status-badge not-supported"
+            badgeEl.innerText = `🔴 Legacy 传统模式 (${decisionReason})`
+            feeTitleEl.innerText = "网络基准 Gas Price"
+
+            // 💥 【优化 4】：传统链模式下配套的层级兜底线：dapp 传值 > feeData.gasPrice > 20Gwei
+            let currentGasPriceBN
+            if (dappHasGasPrice) {
+              currentGasPriceBN = dappGasPriceBN
+            } else if (feeData.gasPrice) {
+              currentGasPriceBN = new BigNumber(feeData.gasPrice.toString())
+            } else {
+              currentGasPriceBN = TWENTY_GWEI
+            }
+
+            feeValueEl.innerHTML = `${currentGasPriceBN.dividedBy(ONE_GWEI).toString()} <span class="unit">Gwei</span>`
+            document.getElementById("base-fee-wei").innerText =
+              "传统模式（无 BaseFee）"
+            document.getElementById("rpc-max-priority").innerText =
+              "传统模式（无小费）"
+            document.getElementById("final-base-maxfee").innerText =
+              currentGasPriceBN.toString()
+
+            let slowGP, stdGP, fastGP
+            if (dappHasGasPrice) {
+              stdGP = currentGasPriceBN
+              slowGP = currentGasPriceBN.dividedBy(1.01).multipliedBy(0.99)
+              fastGP = currentGasPriceBN.dividedBy(1.01).multipliedBy(1.5)
+            } else {
+              slowGP = currentGasPriceBN.multipliedBy(0.99)
+              stdGP = currentGasPriceBN.multipliedBy(1.01)
+              fastGP = currentGasPriceBN.multipliedBy(1.5)
+            }
+
+            const calcLegacyCost = (gpBN) =>
+              gpBN
+                .multipliedBy(finalGasLimitBN)
+                .dividedBy("1000000000000000000")
+                .toString()
+
+            renderLegacyPanel(
+              {
+                slow: {
+                  gwei: slowGP.dividedBy(ONE_GWEI).toString(),
+                  cost: calcLegacyCost(slowGP),
+                },
+                std: {
+                  gwei: stdGP.dividedBy(ONE_GWEI).toString(),
+                  cost: calcLegacyCost(stdGP),
+                },
+                fast: {
+                  gwei: fastGP.dividedBy(ONE_GWEI).toString(),
+                  cost: calcLegacyCost(fastGP),
+                },
+              },
+              gasLimitSource,
+            )
+          }
+
+          const now = new Date()
+          statusEl.innerText = `沙盒测算成功! 刷新时间: ${now.toTimeString().split(" ")[0]}`
+        } catch (error) {
+          console.error(error)
+          badgeEl.className = "status-badge unknown"
+          badgeEl.innerText = "连接中断 / 节点解析异常"
+          statusEl.innerText = `阻断原因: ${error.message}`
+        }
+      }
+
+      function render1559Panel(slow, std, fast, limitSrc) {
+        document.getElementById("test-preset-panel").innerHTML = `
+          <div style="margin-top:10px; padding:12px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; font-size:12px; line-height:1.6;">
+            <div style="margin-bottom: 8px; border-bottom: 1px solid #bbf7d0; padding-bottom: 4px; font-weight: bold; color: #166534;">
+              📊 当前计算采用 Gas Limit 来源：<span style="color:#2563eb;">${limitSrc}</span>
+            </div>
+            <div style="margin-bottom:8px;">
+              <span style="color:#22c55e;">🟢 <b>较慢档位</b></span><br>
+              • 对应计算: Max Fee: <b style="color:#7c3aed;">${slow.mGwei}</b> Gwei | Priority Fee: <b>${slow.pGwei}</b> Gwei<br>
+              • 💰 预估费用: <b>${slow.estCost}</b> 主币 | 最大费用: <b>${slow.maxCost}</b> 主币
+            </div>
+            <div style="margin-bottom:8px; background: #e8fbf0; padding: 4px; border-radius:4px;">
+              <span style="color:#2563eb;">🔵 <b>自定义 / 标准档位 (默认)</b></span><br>
+              • 对应计算: Max Fee: <b style="color:#7c3aed;">${std.mGwei}</b> Gwei | Priority Fee: <b>${std.pGwei}</b> Gwei<br>
+              • 💰 预估费用: <b>${std.estCost}</b> 主币 | 最大费用: <b>${std.maxCost}</b> 主币
+            </div>
+            <div>
+              <span style="color:#f97316;">🟠 <b>稍快档位</b></span><br>
+              • 对应计算: Max Fee: <b style="color:#7c3aed;">${fast.mGwei}</b> Gwei | Priority Fee: <b>${fast.pGwei}</b> Gwei<br>
+              • 💰 预估费用: <b>${fast.estCost}</b> 主币 | 最大费用: <b>${fast.maxCost}</b> 主币
+            </div>
+          </div>`
+      }
+
+      function renderLegacyPanel(data, limitSrc) {
+        document.getElementById("test-preset-panel").innerHTML = `
+          <div style="margin-top:10px; padding:12px; background:#fff1f2; border:1px solid #fecaca; border-radius:8px; font-size:12px; line-height:1.6;">
+            <div style="margin-bottom: 8px; border-bottom: 1px solid #fecaca; padding-bottom: 4px; font-weight: bold; color: #991b1b;">
+              📊 当前计算采用 Gas Limit 来源：<span style="color:#2563eb;">${limitSrc}</span>
+            </div>
+            <div style="margin-bottom:8px;">
+              <span style="color:#94a3b8;">🟢 <b>较慢档位</b></span><br>
+              • 对应 Gas Price: <b>${data.slow.gwei}</b> Gwei<br>
+              • 💰 消耗手续费: <b>${data.slow.cost}</b> 主币
+            </div>
+            <div style="margin-bottom:8px; background: #fff5f5; padding: 4px; border-radius:4px;">
+              <span style="color:#2563eb;">🔵 <b>自定义 / 标准档位 (默认)</b></span><br>
+              • 对应 Gas Price: <b>${data.std.gwei}</b> Gwei<br>
+              • 💰 消耗手续费: <b>${data.std.cost}</b> 主币
+            </div>
+            <div>
+              <span style="color:#b91c1c;">🟠 <b>稍快档位</b></span><br>
+              • 对应 Gas Price: <b>${data.fast.gwei}</b> Gwei<br>
+              • 💰 消耗手续费: <b>${data.fast.cost}</b> 主币
+            </div>
+          </div>`
+      }
+
+      checkAndFetch()
+      if (timer) clearInterval(timer)
+      timer = setInterval(checkAndFetch, 15000)
+    </script>
+  </body>
+</html>
